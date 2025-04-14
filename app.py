@@ -1,23 +1,26 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, jsonify
 import pickle
 
 app = Flask(__name__)
 
 # Load model and vectorizer
-model = pickle.load(open("logistic_model.pkl", "rb"))
-vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
+with open('logistic_model.pkl', 'rb') as f:
+    model = pickle.load(f)
 
-@app.route("/", methods=["GET", "POST"])
+with open('vectorizer.pkl', 'rb') as f:
+    vectorizer = pickle.load(f)
+
+@app.route('/')
 def home():
-    prediction = None
-    if request.method == "POST":
-        review = request.form.get("review")
-        if review:
-            cleaned = review.lower()
-            vector = vectorizer.transform([cleaned])
-            result = model.predict(vector)[0]
-            prediction = "Positive 😊" if result == 1 else "Negative 😞"
-    return render_template("index.html", prediction=prediction)
+    return "API is up! Use the `/predict` endpoint with POST."
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=10000)
+@app.route('/predict', methods=['POST'])
+def predict():
+    data = request.get_json(force=True)
+    text = data['text']
+    vector = vectorizer.transform([text])
+    prediction = model.predict(vector)
+    return jsonify({'prediction': int(prediction[0])})
+
+if __name__ == '__main__':
+    app.run(debug=True)
